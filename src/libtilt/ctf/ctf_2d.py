@@ -22,6 +22,7 @@ def calculate_ctf(
         image_shape: Tuple[int, int],
         rfft: bool,
         fftshift: bool,
+        device: torch.device | None = None
 ):
     """
 
@@ -56,20 +57,22 @@ def calculate_ctf(
         Whether to apply fftshift on the resulting CTF images.
     """
     # to torch.Tensor and unit conversions
-    defocus = torch.atleast_1d(torch.as_tensor(defocus, dtype=torch.float))
+    if bool(rfft) + bool(fftshift) > 1:
+        raise ValueError("Only one of `rfft` and `fftshift` may be `True`.")
+    defocus = torch.atleast_1d(torch.as_tensor(defocus, dtype=torch.float, device=device))
     defocus *= 1e4  # micrometers -> angstroms
-    astigmatism = torch.atleast_1d(torch.as_tensor(astigmatism, dtype=torch.float))
+    astigmatism = torch.atleast_1d(torch.as_tensor(astigmatism, dtype=torch.float, device=device))
     astigmatism *= 1e4  # micrometers -> angstroms
-    astigmatism_angle = torch.atleast_1d(torch.as_tensor(astigmatism_angle, dtype=torch.float))
+    astigmatism_angle = torch.atleast_1d(torch.as_tensor(astigmatism_angle, dtype=torch.float, device=device))
     astigmatism_angle *= (C.pi / 180)  # degrees -> radians
-    pixel_size = torch.atleast_1d(torch.as_tensor(pixel_size))
-    voltage = torch.atleast_1d(torch.as_tensor(voltage, dtype=torch.float))
+    pixel_size = torch.atleast_1d(torch.as_tensor(pixel_size, device=device))
+    voltage = torch.atleast_1d(torch.as_tensor(voltage, dtype=torch.float, device=device))
     voltage *= 1e3  # kV -> V
     spherical_aberration = torch.atleast_1d(
-        torch.as_tensor(spherical_aberration, dtype=torch.float)
+        torch.as_tensor(spherical_aberration, dtype=torch.float, device=device)
     )
     spherical_aberration *= 1e7  # mm -> angstroms
-    image_shape = torch.as_tensor(image_shape)
+    image_shape = torch.as_tensor(image_shape, device=device)
 
     # derived quantities used in CTF calculation
     defocus_u = defocus + astigmatism
@@ -79,10 +82,10 @@ def calculate_ctf(
     k2 = C.pi / 2 * spherical_aberration * _lambda ** 3
     k3 = torch.tensor(np.deg2rad(phase_shift))
     k4 = -b_factor / 4
-    k5 = np.arctan(amplitude_contrast / np.sqrt(1 - amplitude_contrast ** 2))
+    k5 = torch.arctan(amplitude_contrast / torch.sqrt(1 - amplitude_contrast ** 2))
 
     # construct 2D frequency grids and rescale cycles / px -> cycles / Å
-    fftfreq_grid = _construct_fftfreq_grid_2d(image_shape=image_shape, rfft=rfft)  # (h, w, 2)
+    fftfreq_grid = _construct_fftfreq_grid_2d(image_shape=image_shape, rfft=rfft, device=device)  # (h, w, 2)
     fftfreq_grid = fftfreq_grid / einops.rearrange(pixel_size, 'b -> b 1 1 1')
     fftfreq_grid_squared = fftfreq_grid ** 2
 

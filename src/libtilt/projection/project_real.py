@@ -49,7 +49,7 @@ def project_volume_real(volume: torch.Tensor, rotation_matrices: torch.Tensor) -
     torch_padding = einops.rearrange(torch_padding, 'whd pad -> (whd pad)')
     volume = F.pad(volume, pad=tuple(torch_padding), mode='constant', value=0)
     padded_volume_shape = (ps, ps, ps)
-    volume_coordinates = coordinate_grid(image_shape=padded_volume_shape)
+    volume_coordinates = coordinate_grid(image_shape=padded_volume_shape, device=volume.device)
     volume_coordinates -= padded_sidelength // 2  # (d, h, w, zyx)
     volume_coordinates = torch.flip(volume_coordinates, dims=(-1,))  # (d, h, w, zyx)
     volume_coordinates = einops.rearrange(volume_coordinates, 'd h w zyx -> d h w zyx 1')
@@ -73,7 +73,7 @@ def project_volume_real(volume: torch.Tensor, rotation_matrices: torch.Tensor) -
 
     yl, yh = padding[1, 0], -padding[1, 1]
     xl, xh = padding[2, 0], -padding[2, 1]
-    images = [_project_volume(matrix)[yl:yh, xl:xh] for matrix in rotation_matrices]
+    images = [_project_volume(matrix)[yl:yh, xl:xh] for matrix in rotation_matrices] #TODO: This can probabaly optimized using vmap
     return torch.stack(images, dim=0)
 
 

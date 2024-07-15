@@ -49,7 +49,8 @@ def sample_dft_3d(
     samples = torch.view_as_complex(samples.contiguous())  # (b, )
 
     # pack data back up and return
-    [samples] = einops.unpack(samples, pattern='*', packed_shapes=ps)
+    # [samples] = einops.unpack(samples, pattern='*', packed_shapes=ps)
+    samples = samples.reshape(*ps)  # replaces commented line above, for performance
     return samples  # (...)
 
 
